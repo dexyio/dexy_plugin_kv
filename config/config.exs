@@ -2,18 +2,22 @@
 # and its dependencies with the aid of the Mix.Config module.
 use Mix.Config
 
-# Prefix 'g_' variables are used temporally
-g_USERDATA_BUCKET_IDX = 3
+g_APP = :dexy_plugin_kv
 
-config :dexy_plugin_kv, DexyPluginKV, [
+# Prefix 'g_' variables are used temporally
+g_PLUGIN_BUCKET_IDX = [
+  kv: 201
+]
+
+config g_APP, DexyPluginKV, [
   adapter: DexyPluginKV.Adapters.Riak,
-  bucket: <<g_USERDATA_BUCKET_IDX::8>>
+  bucket: <<g_PLUGIN_BUCKET_IDX[:kv]>>
 ]
 
 config :pooler, :pools, [
   [
     name: DexyPluginKV.Adapters.Riak,
-    group: :riak,
+    group: g_APP,
     max_count: 10,
     init_count: 1, 
     start_mfa: {DexyPluginKV.Adapters.Riak, :start_link, []} 

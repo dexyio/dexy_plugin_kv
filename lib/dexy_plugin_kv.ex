@@ -83,7 +83,7 @@ defmodule DexyPluginKV do
     is_bitstring(bkt) && is_bitstring(key) || raise Error.InvalidArgument, state: state
     (byte_size(bkt) > @max_bucket_bytes) && raise Error.BucketLengthExceeded
     (byte_size(key) > @max_key_bytes) && raise Error.KeyLengthExceeded
-    {@bucket, bkt <> ":" <> key}
+    {@bucket, state.req.user <> ":" <> bkt <> ":" <> key}
   end
 
   defp data! %{mappy: map} do
