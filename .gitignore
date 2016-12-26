@@ -1,0 +1,13 @@
+/_build
+/cover
+/deps
+/doc
+*.ez
+*.log
+*.bak
+*.zip
+.*.swp
+.secret.exs
+.DS_Store
+mix.lock
+erl_crash.dump
