@@ -5,16 +5,40 @@ defmodule DexyPluginKVTest do
 
   alias DexyPluginKV, as: KV
 
-  test "the truth" do
-    Application.start :pooler
-    req = %{user: "*"}
+  Application.start :pooler
+  @user %{id: "test2"}
+
+  test "put & get" do
     opts = %{}
 
-    KV.delete %{req: req, args: [], opts: opts}
-    assert {_, nil} = KV.get%{req: req, args: [], opts: opts}
+    KV.delete %{user: @user, args: [], opts: opts}
+    assert {_, nil} = KV.get%{user: @user, args: [], opts: opts}
 
-    KV.put %{req: req, args: ["foo"], opts: opts}
-    assert {_, "foo"} = KV.get %{req: req, args: [], opts: opts}
+    KV.put %{user: @user, args: ["hi"], opts: opts}
+    assert {_, "hi"} = KV.get %{user: @user, args: [], opts: opts}
+
+    opts = %{"bucket"=>"foo"}
+
+    KV.delete %{user: @user, args: [], opts: opts}
+    assert {_, nil} = KV.get%{user: @user, args: [], opts: opts}
+
+    KV.put %{user: @user, args: ["hi"], opts: opts}
+    assert {_, "hi"} = KV.get %{user: @user, args: [], opts: opts}
+
+    opts = %{"bucket"=>"foo", "key"=>"bar"}
+
+    KV.delete %{user: @user, args: [], opts: opts}
+    assert {_, nil} = KV.get%{user: @user, args: [], opts: opts}
+
+    KV.put %{user: @user, args: ["hi"], opts: opts}
+    assert {_, "hi"} = KV.get %{user: @user, args: [], opts: opts}
+  end
+
+  test "buckets" do
+    opts = %{"bucket" => "foo"}
+
+    {_, res} = KV.get_all %{user: @user, args: [], opts: opts}
+    IO.inspect res
   end
 
 end

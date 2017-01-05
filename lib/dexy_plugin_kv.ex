@@ -3,38 +3,67 @@ defmodule DexyPluginKV do
   @app :dexy_plugin_kv
 
   @adapter Application.get_env(@app, __MODULE__)[:adapter] || __MODULE__.Adapters.Riak
-  @bucket Application.get_env(@app, __MODULE__)[:bucket]
 
   defmodule Adapter do
     @type error :: {:error, reason}
     @type reason :: term
     @type result :: {:ok, term} | error
-    @type bucket :: binary
-    @type key :: binary
+    @type user :: bitstring
+    @type bucket :: bitstring
+    @type key :: bitstring
     @type value :: any
+    @type index :: bitstring
+    @type query :: bitstring
+    @type opts :: Keyword.t
 
-    @callback get(bucket, key) :: result
-    @callback put(bucket, key, value, Keywords.t) :: result
-    @callback delete(bucket, key) :: :ok | error
+    @callback put(user, bucket, key, value, Keywords.t) :: result
+    @callback get(user, bucket, key) :: result
+
+    #@callback create(bucket, key) :: :ok | error
+    @callback delete(user, bucket, key) :: :ok | error
+
+    @callback get_all(user, bucket) :: result
+    @callback delete_all(user, bucket) :: :ok | error
+
+    @callback buckets(user) :: result 
+    @callback keys(user, bucket) :: result
+
+    @callback search(query, opts) :: result
   end
 
   use DexyLib, as: Lib
+  require Logger
+
   deferror Error.InvalidArgument
   deferror Error.BucketLengthExceeded
   deferror Error.KeyLengthExceeded
+  deferror Error.KeyDelimiterNotConfigured
 
-  @max_bucket_bytes \
-    Application.get_env(:dexy_plugin_kv, __MODULE__)[:max_bucket_bytes] || 128
+  @max_bucket_bytes Application.get_env(@app, __MODULE__)[:max_bucket_bytes]
+    || (Logger.warn "max_bucket_bytes not configured, default: 128"; 128)
 
-  @max_key_bytes \
-    Application.get_env(:dexy_plugin_kv, __MODULE__)[:max_key_bytes] || 128
+  @max_key_bytes Application.get_env(@app, __MODULE__)[:max_key_bytes]
+    || (Logger.warn "max_key_bytes not configured, default: 128"; 128)
 
   def get state = %{args: [], opts: opts} do
     do_get state, bucket_key(opts, state)
   end
 
-  defp do_get state, {bucket, key} do
-    res = case @adapter.get(bucket, key) do
+  defp do_get state = %{user: user}, {bucket, key} do
+    res = case @adapter.get(user.id, bucket, key) do
+      {:ok, val} -> val
+      {:error, _} -> nil
+    end
+    {state, res}
+  end
+
+  def get_all state = %{args: [], opts: opts} do
+    {bucket, _} = bucket_key(opts, state)
+    do_get_all state, bucket
+  end
+
+  defp do_get_all state = %{user: user}, bucket do
+    res = case @adapter.get_all(user.id, bucket) do
       {:ok, val} -> val
       {:error, _} -> nil
     end
@@ -51,18 +80,18 @@ defmodule DexyPluginKV do
     do_put state, {bucket, key, value}
   end
 
-  defp do_put state, {bucket, key, val} do
-    res = case @adapter.put(bucket, key, val) do
+  defp do_put state = %{user: user}, {bucket, key, val} do
+    res = case @adapter.put(user.id, bucket, key, val) do
       :ok -> "ok"
       {:error, _} -> nil
     end
     {state, res}
   end
 
-  def new state = %{opts: opts} do
+  def create state = %{user: user, opts: opts} do
     with \
       {bucket, key} = bucket_key(opts, state),
-      {:error, _} <- @adapter.get(bucket, key),
+      {:error, _} <- @adapter.get(user.id, bucket, key),
       :ok <- put state
     do
       {state, "ok"} else _ -> {state, nil}
@@ -73,17 +102,30 @@ defmodule DexyPluginKV do
     do_delete state, bucket_key(opts, state)
   end
 
-  defp do_delete state, {bucket, key} do
-    {state, @adapter.delete(bucket, key)}
+  defp do_delete state = %{user: user}, {bucket, key} do
+    {state, @adapter.delete(user.id, bucket, key)}
+  end
+
+  def buckets state = %{args: []} do
+    do_buckets state
+  end
+
+  defp do_buckets state = %{user: user} do
+    {state, @adapter.buckets(user.id)}
   end
 
   defp bucket_key map, state do
-    bkt = map["bucket"] || ""
+    bucket = map["bucket"] || ""
     key = map["key"] || ""
-    is_bitstring(bkt) && is_bitstring(key) || raise Error.InvalidArgument, state: state
-    (byte_size(bkt) > @max_bucket_bytes) && raise Error.BucketLengthExceeded
+    check_bucket_key! bucket, key, state
+    {bucket, key}
+  end
+
+  defp check_bucket_key! bucket, key, state do
+    is_bitstring(bucket) && is_bitstring(key)
+      || (raise Error.InvalidArgument, state: state)
+    (byte_size(bucket) > @max_bucket_bytes) && raise Error.BucketLengthExceeded
     (byte_size(key) > @max_key_bytes) && raise Error.KeyLengthExceeded
-    {@bucket, state.req.user <> ":" <> bkt <> ":" <> key}
   end
 
   defp data! %{mappy: map} do

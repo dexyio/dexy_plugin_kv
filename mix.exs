@@ -31,7 +31,7 @@ defmodule DexyPluginKV.Mixfile do
   defp deps do
     [
       {:dexy_lib, github: "dexyio/dexy_lib"},
-      {:pooler, "~> 1.5", only: :test},
+      {:pooler, "~> 1.5", only: [:test, :dev]},
 
       # adapters
       {:riakc, "~> 2.4"}

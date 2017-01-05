@@ -4,14 +4,14 @@ use Mix.Config
 
 g_APP = :dexy_plugin_kv
 
-# Prefix 'g_' variables are used temporally
-g_PLUGIN_BUCKET_IDX = [
-  kv: 201
+config g_APP, DexyPluginKV, [
+  adapter: DexyPluginKV.Adapters.Riak
 ]
 
-config g_APP, DexyPluginKV, [
-  adapter: DexyPluginKV.Adapters.Riak,
-  bucket: <<g_PLUGIN_BUCKET_IDX[:kv]>>
+config g_APP, DexyPluginKV.Adapters.Riak, [
+  userdata_bucket_type: "userdata",
+  userdata_content_type: "application/dexyml",
+  userdata_index: "idx_userdata",
 ]
 
 config :pooler, :pools, [
@@ -22,6 +22,15 @@ config :pooler, :pools, [
     init_count: 1, 
     start_mfa: {DexyPluginKV.Adapters.Riak, :start_link, []} 
   ]
+]
+
+config :logger,
+  backends: [:console]
+
+config :logger, :console, [
+  level: :debug,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:module]
 ]
 
 # This configuration is loaded before any dependency and is restricted
