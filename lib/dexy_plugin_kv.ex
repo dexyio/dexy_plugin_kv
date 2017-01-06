@@ -65,7 +65,7 @@ defmodule DexyPluginKV do
   defp do_get_all state = %{user: user}, bucket do
     res = case @adapter.get_all(user.id, bucket) do
       {:ok, val} -> val
-      {:error, _} -> nil
+      {:error, _} -> []
     end
     {state, res}
   end

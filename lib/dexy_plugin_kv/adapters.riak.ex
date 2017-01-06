@@ -29,7 +29,7 @@ defmodule DexyPluginKV.Adapters.Riak do
   defmodule Userdata do
     defstruct bucket: nil,
               key: nil,
-              data: nil,
+              value: nil,
               created: nil
   end
 
@@ -57,15 +57,14 @@ defmodule DexyPluginKV.Adapters.Riak do
   end
 
   def get_all user, bucket do
-    #search "_yz_rb:#{user} AND _yz_rk:#{bucket}/*"
     case search "_yz_rb:#{user} AND bucket:#{bucket}" do
       {:ok, {:search_results, list, _, _total}} ->
         res = list |> Enum.map(fn {_idx_name, items} ->
-          %{
-            "key" => elem(Enum.at(items, 3), 1),
-            "value" => elem(Enum.at(items, 6), 1),
-            "created" => elem(Enum.at(items, 5), 1)
-          }
+          [
+            List.keyfind(items, "key", 0, {"key", nil}),
+            List.keyfind(items, "value", 0, {"value", nil}),
+            List.keyfind(items, "created", 0, {"created", nil})
+          ] |> Enum.into(%{})
         end)
         {:ok, res}
       {:error, reason} ->
@@ -104,7 +103,7 @@ defmodule DexyPluginKV.Adapters.Riak do
 
   defp value(object) do
     case :riakc_obj.get_value(object) do
-      bin when is_binary(bin) -> Lib.binary_to_term(bin)[:data]
+      bin when is_binary(bin) -> Lib.binary_to_term(bin)[:value]
       error ->error
     end
   end
@@ -129,7 +128,7 @@ defmodule DexyPluginKV.Adapters.Riak do
     riak_val = %Userdata{
       bucket: bucket,
       key: key,
-      data: val,
+      value: val,
       created: Lib.now(:usecs)
     } |> Map.from_struct |> Map.to_list |> Lib.to_binary
     {riak_key(bucket, key), riak_val}
