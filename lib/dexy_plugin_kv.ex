@@ -14,10 +14,11 @@ defmodule DexyPluginKV do
     @type value :: any
     @type index :: bitstring
     @type query :: bitstring
-    @type query_opts :: Keyword.t
-    @type search_opts :: Keyword.t
+    @type opts :: Keyword.t
+    @type query_or_opts :: query | opts
+    @type search_opts :: opts
 
-    @callback put(user, bucket, key, value, Keywords.t) :: result
+    @callback put(user, bucket, key, value, opts) :: result
     @callback get(user, bucket, key) :: result
 
     #@callback create(bucket, key) :: :ok | error
@@ -29,7 +30,7 @@ defmodule DexyPluginKV do
     @callback buckets(user) :: result 
     @callback keys(user, bucket) :: result
 
-    @callback search(query_opts, search_opts) :: result
+    @callback search(user, query_or_opts, search_opts) :: result
   end
 
   use DexyLib, as: Lib
@@ -81,8 +82,8 @@ defmodule DexyPluginKV do
     do_put state, {bucket, key, value}
   end
 
-  defp do_put state = %{user: user}, {bucket, key, val} do
-    res = case @adapter.put(user.id, bucket, key, val) do
+  defp do_put state = %{user: user, opts: opts}, {bucket, key, val} do
+    res = case @adapter.put(user.id, bucket, key, val, opts) do
       :ok -> "ok"
       {:error, _} -> nil
     end
@@ -115,14 +116,11 @@ defmodule DexyPluginKV do
     {state, @adapter.buckets(user.id)}
   end
 
-  def search state = %{args: []} do do_search state end
+  def search state = %{args: []} do do_search state, nil end
+  def search state = %{args: [query]} do do_search state, query end
 
-  def do_search(state = %{user: user, opts: opts}) do
-    [
-      user: user.id,
-      bucket: opts["bucket"] ,
-      key: opts["key"]
-    ] |> @adapter.search
+  def do_search state = %{user: user, opts: opts}, query do
+    @adapter.search(user.id, query || opts)
       |> case do
         {:ok, res} -> {state, res}
         {:error, _reason} = error -> {state, []}
