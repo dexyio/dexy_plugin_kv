@@ -36,8 +36,13 @@ defmodule DexyPluginKVTest do
 
   test "buckets" do
     opts = %{"bucket" => "foo"}
-
     {_, res} = KV.get_all %{user: @user, args: [], opts: opts}
+    IO.inspect res
+  end
+
+  test "search" do
+    opts = %{}
+    {_, res} = KV.search %{user: @user, args: [], opts: opts}
     IO.inspect res
   end
 

@@ -36,6 +36,8 @@ defmodule DexyPluginKV.Adapters.Riak do
   def start_link(host \\ '127.0.0.1', port \\ 8087) do
     :riakc_pb_socket.start_link(host, port)
   end
+  
+  @spec delete(bitstring, bitstring, bitstring) :: {:ok, term} | {:error, term}
 
   def get user, bucket, key do
     case get_object riak_bucket(user), riak_key(bucket, key) do
@@ -44,6 +46,8 @@ defmodule DexyPluginKV.Adapters.Riak do
     end
   end
 
+  @spec put(bitstring, bitstring, bitstring, any, Keyword.t) :: :ok | {:error, term}
+
   def put user, bucket, key, val, _opts \\ [] do
     {key, val} = riak_keyval bucket, key, val
     riak_bucket(user)
@@ -51,25 +55,17 @@ defmodule DexyPluginKV.Adapters.Riak do
       |> put_object
   end
 
+  @spec delete(bitstring, bitstring, bitstring) :: :ok | {:error, term}
+
   def delete(user, bucket, key) do
     key = riak_key bucket, key
     pool &:riakc_pb_socket.delete(&1, riak_bucket(user), key)
   end
 
+  @spec get_all(bitstring, bitstring) :: {:ok, term} | {:error, term}
+
   def get_all user, bucket do
-    case search "_yz_rb:#{user} AND bucket:#{bucket}" do
-      {:ok, {:search_results, list, _, _total}} ->
-        res = list |> Enum.map(fn {_idx_name, items} ->
-          [
-            List.keyfind(items, "key", 0, {"key", nil}),
-            List.keyfind(items, "value", 0, {"value", nil}),
-            List.keyfind(items, "created", 0, {"created", nil})
-          ] |> Enum.into(%{})
-        end)
-        {:ok, res}
-      {:error, reason} ->
-        {:error, reason}
-    end
+    search user: user, bucket: bucket
   end
 
   def delete_all _user, _bucket do
@@ -83,11 +79,37 @@ defmodule DexyPluginKV.Adapters.Riak do
     []
   end
 
-  def search query, opts \\ [] do
+  @spec search(Keyword.t, Keyword.t) :: {:ok, term} | {:error, term}
+
+  def search query_opts, search_opts \\ [] do
+    user = query_opts[:user]
+    bucket = query_opts[:bucket]
+    key = query_opts[:key]
+    (user && "_yz_rb:#{user}" || "")
+      <> (bucket && " AND bucket:#{bucket}" || "")
+      <> (key && " AND key:#{key}" || "")
+    |> do_search(search_opts)
+  end 
+
+  defp do_search query, opts do
+    IO.puts query
     options = opts[:options] || []
     timeout = opts[:timeout] || default_timeout(:search)
-    pool &:riakc_pb_socket.search(&1, @userdata_index, query, options, timeout)
-  end 
+    case pool &:riakc_pb_socket.search(&1, @userdata_index, query, options, timeout) do
+      {:ok, {:search_results, list, _, _total}} ->
+        res = list |> Enum.map(fn {_idx_name, items} ->
+          [
+            List.keyfind(items, "bucket", 0, {"bucket", nil}),
+            List.keyfind(items, "key", 0, {"key", nil}),
+            List.keyfind(items, "value", 0, {"value", nil}),
+            List.keyfind(items, "created", 0, {"created", nil})
+          ] |> Enum.into(%{})
+        end)
+        {:ok, res}
+      {:error, _reason} = error ->
+        error
+    end
+  end
 
   defp put_object(object) do
     pool &:riakc_pb_socket.put(&1, object)

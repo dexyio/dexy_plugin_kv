@@ -14,7 +14,8 @@ defmodule DexyPluginKV do
     @type value :: any
     @type index :: bitstring
     @type query :: bitstring
-    @type opts :: Keyword.t
+    @type query_opts :: Keyword.t
+    @type search_opts :: Keyword.t
 
     @callback put(user, bucket, key, value, Keywords.t) :: result
     @callback get(user, bucket, key) :: result
@@ -28,7 +29,7 @@ defmodule DexyPluginKV do
     @callback buckets(user) :: result 
     @callback keys(user, bucket) :: result
 
-    @callback search(query, opts) :: result
+    @callback search(query_opts, search_opts) :: result
   end
 
   use DexyLib, as: Lib
@@ -112,6 +113,20 @@ defmodule DexyPluginKV do
 
   defp do_buckets state = %{user: user} do
     {state, @adapter.buckets(user.id)}
+  end
+
+  def search state = %{args: []} do do_search state end
+
+  def do_search(state = %{user: user, opts: opts}) do
+    [
+      user: user.id,
+      bucket: opts["bucket"] ,
+      key: opts["key"]
+    ] |> @adapter.search
+      |> case do
+        {:ok, res} -> {state, res}
+        {:error, _reason} = error -> {state, []}
+      end
   end
 
   defp bucket_key map, state do
