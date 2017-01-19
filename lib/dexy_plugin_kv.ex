@@ -1,8 +1,16 @@
 defmodule DexyPluginKV do
 
+  require Logger
+
   @app :dexy_plugin_kv
 
   @adapter Application.get_env(@app, __MODULE__)[:adapter] || __MODULE__.Adapters.Riak
+
+  @default_search_rows 1000
+  @search_rows Application.get_env(@app, __MODULE__)[:search_rows] || (
+    Logger.warn "search_rows: not configured, default: #{@default_search_rows}";
+    @default_search_rows
+  )
 
   defmodule Adapter do
     @type error :: {:error, reason}
@@ -119,12 +127,19 @@ defmodule DexyPluginKV do
   def search state = %{args: []} do do_search state, nil end
   def search state = %{args: [query]} do do_search state, query end
 
-  def do_search state = %{user: user, opts: opts}, query do
-    @adapter.search(user.id, query || opts)
+  defp do_search state = %{user: user, opts: opts}, query do
+    search_opts = do_search_opts opts
+    @adapter.search(user.id, query || opts, search_opts)
       |> case do
         {:ok, res} -> {state, res}
         {:error, _reason} = error -> {state, []}
       end
+  end
+
+  defp do_search_opts opts do
+    opts2 = [start: opts["start"] || 0, rows: opts["rows"] || @search_rows]
+    opts2 = (sort = opts["sort"]) && [{:sort, sort} | opts2] || opts2
+    (timeout = opts["timeout"]) && [{:timeout, timeout} | opts2] || opts2
   end
 
   defp bucket_key map, state do

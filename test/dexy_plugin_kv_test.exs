@@ -52,6 +52,38 @@ defmodule DexyPluginKVTest do
     assert res1 = res2 = res3
   end
 
+  test "search options" do
+    "ok" = put "2", %{"bucket"=>"sort.test", "key"=>"2"}
+    "ok" = put "3", %{"bucket"=>"sort.test", "key"=>"3"}
+    "ok" = put "1", %{"bucket"=>"sort.test", "key"=>"1"}
+
+    assert 0 == %{"bucket"=>"sort.test", "rows"=>0} |> search |> length
+    assert 1 == %{"bucket"=>"sort.test", "rows"=>1} |> search |> length
+    assert 2 == %{"bucket"=>"sort.test", "rows"=>2} |> search |> length
+    assert 3 == %{"bucket"=>"sort.test", "rows"=>3} |> search |> length
+    assert 3 == %{"bucket"=>"sort.test"} |> search |> length
+
+    assert [
+      %{"bucket" => "sort.test", "created" => _, "key" => "2", "value" => "2"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "3", "value" => "3"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "1", "value" => "1"},
+    ] = %{"bucket"=>"sort.test"} |> search
+
+    assert [
+      %{"bucket" => "sort.test", "created" => _, "key" => "1", "value" => "1"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "2", "value" => "2"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "3", "value" => "3"},
+    ] = %{"bucket"=>"sort.test", "sort"=>"key asc"} |> search
+
+    assert [
+      %{"bucket" => "sort.test", "created" => _, "key" => "3", "value" => "3"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "2", "value" => "2"},
+      %{"bucket" => "sort.test", "created" => _, "key" => "1", "value" => "1"},
+    ] = %{"bucket"=>"sort.test", "sort"=>"key desc"} |> search
+
+    assert [] = %{"bucket"=>"sort.test", "sort"=>"key"} |> search
+  end
+
   defp put value, opts do
     {_state, res} = KV.put %{mappy: %{}, user: @user, args: [value], opts: opts}
     res

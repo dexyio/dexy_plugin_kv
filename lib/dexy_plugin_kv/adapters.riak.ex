@@ -134,10 +134,10 @@ defmodule DexyPluginKV.Adapters.Riak do
   @riak_key_field "_yz_rk"
 
   defp do_search query, opts do
-    IO.puts "\n### query => " <> query
-    options = opts[:options] || []
-    timeout = opts[:timeout] || default_timeout(:search)
-    case pool &:riakc_pb_socket.search(&1, @userdata_index, query, options, timeout) do
+    Logger.info "query: #{query}, opts: #{inspect opts}"
+    {timeout, opts} = Keyword.pop opts, :timeout
+    timeout = timeout || default_timeout(:search)
+    case pool &:riakc_pb_socket.search(&1, @userdata_index, query, opts, timeout) do
       {:ok, {:search_results, list, _, _total}} ->
         res = list |> Enum.map(fn {_idx_name, items} ->
           {_, bucket} = List.keyfind items, @riak_bucket_field, 0 
