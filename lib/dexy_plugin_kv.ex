@@ -132,7 +132,7 @@ defmodule DexyPluginKV do
     @adapter.search(user.id, query || opts, search_opts)
       |> case do
         {:ok, res} -> {state, res}
-        {:error, _reason} = error -> {state, []}
+        {:error, _reason} -> {state, []}
       end
   end
 

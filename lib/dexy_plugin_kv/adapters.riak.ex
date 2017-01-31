@@ -11,7 +11,7 @@ defmodule DexyPluginKV.Adapters.Riak do
   deferror Error.UserdataContentTypeNotConfigured
   deferror Error.UserdataIndexNotConfigured
 
-  @default_content_type "application/x-erlang-binary"
+  _default_content_type = "application/x-erlang-binary"
 
   @userdata_bucket_type Application.get_env(@app, __MODULE__)[:userdata_bucket_type]
     || raise Error.UserdataBucketTypeNotConfigured
@@ -216,7 +216,7 @@ defmodule DexyPluginKV.Adapters.Riak do
   end
 
   defp pool(fun) do
-    pid = take_member
+    pid = take_member()
     res = fun.(pid)
     return_member pid
     res
