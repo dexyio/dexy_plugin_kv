@@ -34,7 +34,8 @@ defmodule DexyPluginKV.Mixfile do
       {:pooler, "~> 1.5", only: [:test, :dev]},
 
       # adapters
-      {:riakc, "~> 2.4"}
+      #{:riakc, "~> 2.4", override: true}
+      {:riakc, github: "basho/riak-erlang-client", tag: "2.5.2", override: true}
     ]
   end
 end
