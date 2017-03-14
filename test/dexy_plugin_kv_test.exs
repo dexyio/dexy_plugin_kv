@@ -22,11 +22,6 @@ defmodule DexyPluginKVTest do
     assert {_, "3"} = KV.get %{user: @user, args: [], opts: opts}
   end
 
-  test "buckets" do
-    %{"bucket" => "foo"}
-    |> get_all |> IO.inspect
-  end
-
   test "simple search" do
     res1 = %{} |> search |> IO.inspect 
     res2 = %{"query" => ""} |> search |> IO.inspect 
@@ -91,11 +86,6 @@ defmodule DexyPluginKVTest do
 
   defp get opts do
     {_state, val} = KV.get %{mappy: %{}, user: @user, args: [], opts: opts}
-    val
-  end
-
-  defp get_all opts do
-    {_state, val} = KV.get_all %{mappy: %{}, user: @user, args: [], opts: opts}
     val
   end
 

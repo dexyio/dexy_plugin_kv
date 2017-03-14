@@ -32,7 +32,6 @@ defmodule DexyPluginKV do
     #@callback create(bucket, key) :: :ok | error
     @callback delete(user, bucket, key) :: :ok | error
 
-    @callback get_all(user, bucket) :: result
     @callback delete_all(user, bucket) :: :ok | error
 
     @callback buckets(user) :: result 
@@ -63,19 +62,6 @@ defmodule DexyPluginKV do
     res = case @adapter.get(user.id, bucket, key) do
       {:ok, val} -> val
       {:error, _} -> nil
-    end
-    {state, res}
-  end
-
-  def get_all state = %{args: [], opts: opts} do
-    {bucket, _} = bucket_key(opts, state)
-    do_get_all state, bucket
-  end
-
-  defp do_get_all state = %{user: user}, bucket do
-    res = case @adapter.get_all(user.id, bucket) do
-      {:ok, val} -> val
-      {:error, _} -> []
     end
     {state, res}
   end
